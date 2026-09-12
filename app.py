@@ -4,6 +4,8 @@ from core.database import init_db
 from data.seed_data import seed_database
 from ui.components import inject_custom_css, render_header, render_empty_state
 from ui.dashboard import render_dashboard_page
+from ui.leads import render_leads_page
+from ui.lead_detail import render_lead_detail_page
 
 # Set Streamlit Page Configuration
 st.set_page_config(
@@ -27,6 +29,10 @@ def initialize_app():
 
 # Initialize Database & Seed System
 initialize_app()
+
+# Session State for Account Detail View Navigation
+if "selected_lead_id" not in st.session_state:
+    st.session_state["selected_lead_id"] = None
 
 # ==========================================
 # SIDEBAR NAVIGATION
@@ -58,7 +64,7 @@ nav_option = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
     <div style="font-size: 11px; color: #64748B; line-height: 1.6;">
-        <div><strong>Status:</strong> <span style="color: #10B981;">● Dashboard Module Ready</span></div>
+        <div><strong>Status:</strong> <span style="color: #10B981;">● Lead Registry & CRM Active</span></div>
         <div><strong>Database:</strong> SQLite Local</div>
         <div><strong>Target ICP:</strong> Bangalore B2B Tech</div>
         <div><strong>Target Role:</strong> BDA — {config.COMPANY_NAME}</div>
@@ -71,16 +77,25 @@ st.sidebar.markdown(f"""
 # PAGE ROUTING
 # ==========================================
 if nav_option == "Executive Dashboard":
+    st.session_state["selected_lead_id"] = None
     render_dashboard_page()
+
+elif nav_option == "Lead Intelligence":
+    if st.session_state.get("selected_lead_id"):
+        render_lead_detail_page(st.session_state["selected_lead_id"])
+    else:
+        render_leads_page()
+
 else:
+    st.session_state["selected_lead_id"] = None
     render_header(
         title=nav_option,
         subtitle=f"Modular architecture view for {nav_option}.",
-        badge="Sprint 4 Ready"
+        badge="Sprint 5 Active"
     )
 
     render_empty_state(
         title=f"{nav_option} Module",
-        description=f"The {nav_option} module is registered in the Sprint 4 UI system architecture. View pages will be wired in Sprints 5-9.",
+        description=f"The {nav_option} module is registered in the system architecture. View pages will be wired in Sprints 6-9.",
         icon="🚀"
     )
