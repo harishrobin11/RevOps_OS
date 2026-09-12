@@ -90,19 +90,20 @@ streamlit run app.py
 ## 📊 Modules & Roadmap
 
 - [x] **Sprint 1 — Foundation & Executive Dashboard**: System configuration, database schema, demo seed generator, executive dark UI design system, app shell, real-time KPI metrics.
-- [ ] **Sprint 2 — Data Layer & Service Layer**: Complete CRUD operations for leads, qualifications, activities, and pipelines.
-- [ ] **Sprint 3 — Intelligence Engine**: Deterministic Python engines for ICP scoring, BANT qualification, priority weighting, and deal health calculation.
-- [ ] **Sprint 4 — Lead Intelligence Module**: Complete registry, multi-criteria filtering, search, sorting, and lead management.
-- [ ] **Sprint 5 — Account / Lead Detail CRM View**: 3-column executive deal card view with activity timelines and note logging.
-- [ ] **Sprint 6 — Pipeline Management**: Kanban board with stage movement and deal health badges.
-- [ ] **Sprint 7 — Outreach & Script Engine**: Multichannel cold calling, email, LinkedIn cadences, and objection handling.
-- [ ] **Sprint 8 — Revenue Analytics**: Funnel conversion, stage leakage, industry performance, and at-risk deal analytics.
-- [ ] **Sprint 9 — Data Import & Export**: Robust CSV import validation and export engine.
-- [ ] **Sprint 10 — UI Polish & E2E Validation**: Refined typography, status badges, empty states, and user experience polish.
+- [x] **Sprint 2 — Data Layer & Service Layer**: Complete CRUD operations for leads, qualifications, activities, and pipelines.
+- [x] **Sprint 3 — Intelligence Engine**: Deterministic Python engines for 100-point ICP scoring, BANT qualification, priority weighting, and deal health calculation.
+- [x] **Sprint 4 — Executive Dashboard UI**: Executive KPI cards, funnel metrics, interactive Plotly charts, target priority account table, and follow-up queue tabs.
+- [x] **Sprint 5 — Lead Intelligence & CRM View**: Complete lead registry with multi-criteria search/filtering and 3-column CRM deal card view.
+- [x] **Sprint 6 — Pipeline Management**: 10-stage Kanban board with stage movement controller, deal health badges, and weighted pipeline metrics.
+- [x] **Sprint 7 — Outreach & Script Engine**: Multichannel cold calling, email, LinkedIn cadences, deterministic script generator, and objection handling battlecards.
+- [x] **Sprint 8 — Revenue Analytics**: Funnel conversion rates, stage leakage analysis, industry/source win rate performance, and at-risk deal audit.
+- [x] **Sprint 9 — Data Import & Export**: Robust CSV import validation (missing fields, duplicate check, email validation), error logging, bulk DB insertion, and CSV exports.
+- [x] **Sprint 10 — UI Polish & E2E Validation**: Refined executive dark theme typography, status badges, full test suite (27 automated tests), and end-to-end system verification.
 
 ---
 
 ## 💼 Business Positioning
 
-*Built by Harish Robin H. for Avgova Solutions portfolio demonstration.*
+*Built by Harish Robin H. for Avgova Solutions portfolio demonstration.*  
 "Designed to help B2B revenue teams prioritize the right accounts, standardize qualification, execute consistent outbound cadences, track next actions, and eliminate sales funnel leakage."
+
