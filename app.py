@@ -2,17 +2,20 @@ from datetime import datetime, timezone
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from sqlalchemy import func
 
 import config
-from core.database import init_db, get_db
-from core.models import Lead, Qualification, Activity, Pipeline
+from core.database import init_db
 from data.seed_data import seed_database
+from services.analytics_service import (
+    get_executive_kpis,
+    get_funnel_distribution,
+    get_industry_distribution,
+    get_priority_accounts_summary
+)
 from ui.components import (
     inject_custom_css,
     render_header,
     render_metric_card,
-    render_priority_badge,
     render_empty_state
 )
 
@@ -33,8 +36,7 @@ def initialize_app():
     Initialize database schema and seed demo data if empty.
     """
     init_db()
-    with get_db() as session:
-        seed_database(session)
+    seed_database()
 
 
 # Initialize Database & Seed System
@@ -70,7 +72,7 @@ nav_option = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
     <div style="font-size: 11px; color: #64748B; line-height: 1.6;">
-        <div><strong>Status:</strong> <span style="color: #10B981;">● System Operational</span></div>
+        <div><strong>Status:</strong> <span style="color: #10B981;">● Service Layer Active</span></div>
         <div><strong>Database:</strong> SQLite Local</div>
         <div><strong>Target ICP:</strong> Bangalore B2B Tech</div>
         <div><strong>Target Role:</strong> BDA — {config.COMPANY_NAME}</div>
@@ -86,101 +88,38 @@ if nav_option == "Executive Dashboard":
     render_header(
         title="Executive Revenue Dashboard",
         subtitle=f"Real-time lead intelligence, pipeline health, and high-priority accounts for {config.COMPANY_NAME}.",
-        badge="Sprint 1 Active"
+        badge="Sprint 2 Active"
     )
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-
-    # Fetch Real Database Queries
-    with get_db() as session:
-        total_accounts = session.query(Lead).count()
-        contacted_accounts = session.query(Lead).filter(Lead.pipeline_stage != "Identified").count()
-        
-        # Qualified leads: Priority A or high BANT score
-        qualified_leads = session.query(Lead).filter(
-            (Lead.priority == "Priority A") | (Lead.pipeline_stage.in_(["Qualified", "Discovery Booked", "Proposal", "Negotiation", "Won"]))
-        ).count()
-        
-        discovery_meetings = session.query(Lead).filter(
-            Lead.pipeline_stage.in_(["Discovery Booked", "Proposal", "Negotiation", "Won"])
-        ).count()
-        
-        open_opportunities = session.query(Lead).filter(
-            ~Lead.pipeline_stage.in_(["Won", "Lost"])
-        ).count()
-
-        pipeline_val_res = session.query(func.sum(Lead.deal_value)).filter(
-            ~Lead.pipeline_stage.in_(["Won", "Lost"])
-        ).scalar()
-        pipeline_value = pipeline_val_res if pipeline_val_res else 0.0
-
-        won_count = session.query(Lead).filter(Lead.pipeline_stage == "Won").count()
-        win_rate = (won_count / total_accounts * 100) if total_accounts > 0 else 0.0
-
-        overdue_followups = session.query(Lead).filter(
-            Lead.next_follow_up < now,
-            ~Lead.pipeline_stage.in_(["Won", "Lost"])
-        ).count()
-
-        due_today_followups = session.query(Lead).filter(
-            func.date(Lead.next_follow_up) == func.date(now),
-            ~Lead.pipeline_stage.in_(["Won", "Lost"])
-        ).count()
-
-        # Priority Accounts - process inside session to avoid DetachedInstanceError
-        priority_leads = session.query(Lead).filter(
-            Lead.priority.in_(["Priority A", "Priority B"])
-        ).order_by(Lead.icp_score.desc()).limit(10).all()
-
-        priority_accounts = []
-        for acc in priority_leads:
-            f_up_str = acc.next_follow_up.strftime("%Y-%m-%d") if acc.next_follow_up else "None set"
-            is_overdue = bool(acc.next_follow_up and acc.next_follow_up < now)
-            status_tag = "⚠️ OVERDUE" if is_overdue else "OK"
-            priority_accounts.append({
-                "Company": acc.company_name,
-                "Contact Person": f"{acc.contact_name} ({acc.title})" if acc.title else acc.contact_name,
-                "Industry": acc.industry,
-                "Stage": acc.pipeline_stage,
-                "Priority": acc.priority,
-                "ICP Score": f"{acc.icp_score:.0f}/100",
-                "Deal Value": f"₹{acc.deal_value/100000:.1f}L",
-                "Next Follow-up": f_up_str,
-                "Status": status_tag
-            })
-
-        # Pipeline Distribution
-        stage_counts = session.query(
-            Lead.pipeline_stage, func.count(Lead.id)
-        ).group_by(Lead.pipeline_stage).all()
-
-        # Industry Mix
-        industry_counts = session.query(
-            Lead.industry, func.count(Lead.id)
-        ).group_by(Lead.industry).all()
+    # Fetch Metrics via Analytics Service Layer
+    kpis = get_executive_kpis()
+    funnel_data = get_funnel_distribution()
+    industry_data = get_industry_distribution()
+    priority_accounts = get_priority_accounts_summary(limit=10)
 
     # 1. KPI METRICS ROW
     kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
     with kpi_col1:
-        render_metric_card("Total Accounts", f"{total_accounts}", "Target B2B Accounts", "#3B82F6")
+        render_metric_card("Total Accounts", f"{kpis['total_accounts']}", "Target B2B Accounts", "#3B82F6")
     with kpi_col2:
-        contact_pct = (contacted_accounts / total_accounts * 100) if total_accounts > 0 else 0
-        render_metric_card("Contacted Accounts", f"{contacted_accounts}", f"{contact_pct:.1f}% Outreach Rate", "#06B6D4")
+        contact_pct = (kpis['contacted_accounts'] / kpis['total_accounts'] * 100) if kpis['total_accounts'] > 0 else 0
+        render_metric_card("Contacted Accounts", f"{kpis['contacted_accounts']}", f"{contact_pct:.1f}% Outreach Rate", "#06B6D4")
     with kpi_col3:
-        render_metric_card("Qualified Opportunities", f"{qualified_leads}", f"{discovery_meetings} Discovery Meetings", "#10B981")
+        render_metric_card("Qualified Opportunities", f"{kpis['qualified_leads']}", f"{kpis['discovery_meetings']} Discovery Meetings", "#10B981")
     with kpi_col4:
-        val_str = f"₹{pipeline_value/100000:.1f}L" if pipeline_value < 10000000 else f"₹{pipeline_value/10000000:.2f}Cr"
-        render_metric_card("Active Pipeline Value", val_str, f"{open_opportunities} Open Deals", "#F59E0B")
+        val = kpis['pipeline_value']
+        val_str = f"₹{val/100000:.1f}L" if val < 10000000 else f"₹{val/10000000:.2f}Cr"
+        render_metric_card("Active Pipeline Value", val_str, f"{kpis['open_opportunities']} Open Deals", "#F59E0B")
 
     kpi_col5, kpi_col6, kpi_col7, kpi_col8 = st.columns(4)
     with kpi_col5:
-        render_metric_card("Conversion Rate", f"{win_rate:.1f}%", f"{won_count} Closed Won Deals", "#10B981")
+        render_metric_card("Conversion Rate", f"{kpis['win_rate']:.1f}%", f"{kpis['won_count']} Closed Won Deals", "#10B981")
     with kpi_col6:
-        render_metric_card("Overdue Follow-ups", f"{overdue_followups}", "Requires Immediate Action", "#EF4444" if overdue_followups > 0 else "#10B981")
+        render_metric_card("Overdue Follow-ups", f"{kpis['overdue_followups']}", "Requires Immediate Action", "#EF4444" if kpis['overdue_followups'] > 0 else "#10B981")
     with kpi_col7:
-        render_metric_card("Due Today", f"{due_today_followups}", "Today's Action Items", "#F59E0B")
+        render_metric_card("Due Today", f"{kpis['due_today_followups']}", "Today's Action Items", "#F59E0B")
     with kpi_col8:
-        render_metric_card("Priority A Leads", "5 Accounts", "Hot Prospects", "#8B5CF6")
+        render_metric_card("Priority A Leads", f"{kpis['priority_a_count']} Accounts", "Hot Prospects", "#8B5CF6")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -189,9 +128,9 @@ if nav_option == "Executive Dashboard":
 
     with chart_col1:
         st.markdown('<div class="section-card"><h3>📊 Pipeline Stage Funnel</h3>', unsafe_allow_html=True)
-        if stage_counts:
-            df_stage = pd.DataFrame(stage_counts, columns=["Stage", "Count"])
-            # Reorder stages according to configuration
+        if funnel_data:
+            df_stage = pd.DataFrame(funnel_data)
+            df_stage.columns = ["Stage", "Count"]
             df_stage['Stage'] = pd.Categorical(df_stage['Stage'], categories=config.PIPELINE_STAGES, ordered=True)
             df_stage = df_stage.sort_values('Stage')
             fig_funnel = px.bar(
@@ -216,8 +155,9 @@ if nav_option == "Executive Dashboard":
 
     with chart_col2:
         st.markdown('<div class="section-card"><h3>🏢 Industry Mix Distribution</h3>', unsafe_allow_html=True)
-        if industry_counts:
-            df_ind = pd.DataFrame(industry_counts, columns=["Industry", "Count"])
+        if industry_data:
+            df_ind = pd.DataFrame(industry_data)
+            df_ind.columns = ["Industry", "Count"]
             fig_pie = px.pie(
                 df_ind,
                 names="Industry",
@@ -234,25 +174,25 @@ if nav_option == "Executive Dashboard":
             st.plotly_chart(fig_pie, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 3. PRIORITY ACCOUNTS TABLE & FOLLOW-UP QUEUE
+    # 3. PRIORITY ACCOUNTS TABLE & ACTIONS
     st.markdown('<div class="section-card"><h3>🔥 Target Priority Accounts & Actions</h3>', unsafe_allow_html=True)
     if priority_accounts:
         df_p = pd.DataFrame(priority_accounts)
+        # Drop raw id for presentation
+        if "id" in df_p.columns:
+            df_p = df_p.drop(columns=["id"])
         st.dataframe(df_p, use_container_width=True, hide_index=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    # Modules to be built in Sprints 2 - 10
     render_header(
         title=nav_option,
-        subtitle=f"Module roadmap view for {nav_option}.",
-        badge="Sprint 1 Foundation Active"
-    )
-    
-    render_empty_state(
-        title=f"{nav_option} Module",
-        description=f"The {nav_option} engine is registered in the Sprint 1 system architecture and will be populated in subsequent sprint releases.",
-        icon="🚀"
+        subtitle=f"Service Layer enabled for {nav_option}.",
+        badge="Sprint 2 Service Layer Ready"
     )
 
-    st.info("💡 **Developer Note**: Sprint 1 has successfully established the database schema, models, seeding engine, executive dark UI framework, and live executive dashboard. Modules will be enabled iteratively in future sprints.")
+    render_empty_state(
+        title=f"{nav_option} Module",
+        description=f"The service layer services for {nav_option} are active. View modules will be wired in Sprints 3-9.",
+        icon="⚡"
+    )
