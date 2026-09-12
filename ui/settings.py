@@ -20,7 +20,7 @@ def render_import_export_page():
                 Bulk import B2B leads via CSV with validation, export CRM data, and manage pipeline configuration.
             </p>
         </div>
-    """, unsafe_allow_allowed_html=True)
+    """, unsafe_allow_html=True)
 
     tabs = st.tabs(["📥 CSV Lead Import", "📤 Data Export", "🎯 Target ICP Configuration"])
 
@@ -97,7 +97,7 @@ def render_import_export_page():
                 <div style="background-color: #1E293B; padding: 20px; border-radius: 8px; border: 1px solid #334155;">
                     <h4 style="color: #38BDF8; margin-top: 0;">📋 Export Lead Registry & Opportunities</h4>
                     <p style="color: #94A3B8; font-size: 0.85rem;">Export active leads, ICP scores, BANT status, and pipeline stages.</p>
-            """, unsafe_allow_allowed_html=True)
+            """, unsafe_allow_html=True)
 
             exp_stage = st.selectbox("Filter Stage for Export", ["All"] + config.PIPELINE_STAGES, key="exp_stage")
             exp_industry = st.selectbox("Filter Industry for Export", ["All"] + config.TARGET_INDUSTRIES, key="exp_ind")
@@ -111,14 +111,14 @@ def render_import_export_page():
                 mime="text/csv",
                 use_container_width=True
             )
-            st.markdown("</div>", unsafe_allow_allowed_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
         with ex_col2:
             st.markdown("""
                 <div style="background-color: #1E293B; padding: 20px; border-radius: 8px; border: 1px solid #334155;">
                     <h4 style="color: #38BDF8; margin-top: 0;">📜 Export Full Activity Timeline</h4>
                     <p style="color: #94A3B8; font-size: 0.85rem;">Export complete touchpoint log (calls, emails, meeting notes, stage updates).</p>
-            """, unsafe_allow_allowed_html=True)
+            """, unsafe_allow_html=True)
 
             act_csv_data = export_activities_to_csv()
 
@@ -129,7 +129,7 @@ def render_import_export_page():
                 mime="text/csv",
                 use_container_width=True
             )
-            st.markdown("</div>", unsafe_allow_allowed_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
     # TAB 3: TARGET ICP CONFIGURATION
     with tabs[2]:
