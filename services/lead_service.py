@@ -48,15 +48,34 @@ def validate_lead_data(data: dict, is_create: bool = False) -> tuple[bool, list[
     return (len(errors) == 0, errors)
 
 
+from core.scoring import calculate_icp_score, classify_icp_fit
+from core.health import calculate_deal_health
+from core.qualification import calculate_bant_score, classify_bant_priority
+
+
 def create_lead(lead_data: dict) -> dict:
     """
     Create a new Lead with default Qualification and Pipeline records.
+    Automatically calculates ICP Score and Deal Health via Intelligence Engine.
     """
     is_valid, errors = validate_lead_data(lead_data, is_create=True)
     if not is_valid:
         raise ValueError("; ".join(errors))
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Compute ICP Score via Intelligence Engine
+    icp_score, fit_label, _ = calculate_icp_score(
+        industry=lead_data.get("industry", "SaaS"),
+        employee_count=lead_data.get("employee_count", 0),
+        location=lead_data.get("location", "Outer Ring Road"),
+        title=lead_data.get("title", ""),
+        pain_points=lead_data.get("notes", "")
+    )
+
+    stage = lead_data.get("pipeline_stage", "Identified")
+    prob = config.STAGE_PROBABILITIES.get(stage, 0.05)
+    health = calculate_deal_health(stage=stage)
 
     with get_db() as session:
         # Check duplicate company + contact
@@ -67,9 +86,6 @@ def create_lead(lead_data: dict) -> dict:
 
         if existing:
             raise ValueError(f"A lead for company '{lead_data['company_name']}' with contact '{lead_data['contact_name']}' already exists.")
-
-        stage = lead_data.get("pipeline_stage", "Identified")
-        prob = config.STAGE_PROBABILITIES.get(stage, 0.05)
 
         lead = Lead(
             company_name=lead_data["company_name"].strip(),
@@ -83,12 +99,12 @@ def create_lead(lead_data: dict) -> dict:
             website=lead_data.get("website", ""),
             lead_source=lead_data.get("lead_source", "Outbound Cold Outreach"),
             notes=lead_data.get("notes", ""),
-            icp_score=float(lead_data.get("icp_score", 50.0)),
+            icp_score=icp_score,
             priority=lead_data.get("priority", "Priority C"),
             pipeline_stage=stage,
             deal_value=float(lead_data.get("deal_value", 0.0)),
             probability=prob,
-            deal_health=lead_data.get("deal_health", "Healthy"),
+            deal_health=health,
             created_at=now,
             updated_at=now
         )
