@@ -82,61 +82,102 @@ def render_pipeline_page():
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 3. KANBAN BOARD GRID VIEW
+    # 3. KANBAN BOARD VIEW CONTROLS
     st.markdown('<div class="section-card"><div class="section-card-title"><span>📋 Pipeline Kanban Board View</span></div>', unsafe_allow_html=True)
 
     kanban_data = get_pipeline_kanban_data()
 
-    # Stage Filter
-    sel_kanban_stage = st.selectbox("Filter Kanban Columns", ["Show All 10 Stages"] + config.PIPELINE_STAGES, index=0)
+    # Pipeline View Preset Controls
+    k_col1, k_col2 = st.columns([2, 2])
+    with k_col1:
+        view_preset = st.radio(
+            "Kanban View Range",
+            [
+                "🌐 Full 10-Stage Pipeline (Horizontal Scroll)",
+                "🔥 Active Stages (Identified -> Negotiation)",
+                "🏆 Closed & Nurture (Won, Lost, Nurture)",
+                "🎯 Single Stage Focus"
+            ],
+            index=0,
+            horizontal=True
+        )
 
-    if sel_kanban_stage == "Show All 10 Stages":
+    with k_col2:
+        if view_preset == "🎯 Single Stage Focus":
+            single_stage = st.selectbox("Select Stage Focus", config.PIPELINE_STAGES, index=0)
+        else:
+            single_stage = config.PIPELINE_STAGES[0]
+
+    # Determine which stages to display based on preset
+    if "Full 10-Stage" in view_preset:
         display_stages = config.PIPELINE_STAGES
+    elif "Active Stages" in view_preset:
+        display_stages = ["Identified", "Contacted", "Engaged", "Qualified", "Discovery Booked", "Proposal", "Negotiation"]
+    elif "Closed & Nurture" in view_preset:
+        display_stages = ["Won", "Lost", "Nurture"]
     else:
-        display_stages = [sel_kanban_stage]
+        display_stages = [single_stage]
 
-    # Render columns in scrollable horizontal layout
-    cols = st.columns(len(display_stages))
+    # BUILD HORIZONTAL SCROLLABLE KANBAN BOARD CONTAINER
+    # Each column has min-width: 270px to prevent narrow squeezing/text wrapping issues
+    kanban_html = ['<div style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 12px; margin-top: 12px; scrollbar-width: thin;">']
 
-    for idx, stage in enumerate(display_stages):
+    for stage in display_stages:
         cards = kanban_data.get(stage, [])
         stage_total_val = sum(c["deal_value"] for c in cards)
 
-        with cols[idx]:
-            # Stage Header
-            st.markdown(f"""
-                <div style="background-color: #0F172A; border: 1px solid #1E293B; border-radius: 8px; padding: 10px; margin-bottom: 12px; text-align: center;">
-                    <div style="font-weight: 700; color: #F8FAFC; font-size: 13px;">{stage}</div>
-                    <div style="font-size: 11px; color: #38BDF8; font-weight: 600;">{len(cards)} Deals</div>
-                    <div style="font-size: 11px; color: #94A3B8;">{format_currency(stage_total_val)}</div>
+        # Stage Column Wrapper
+        col_html = [f'''
+            <div style="flex: 0 0 270px; min-width: 270px; background-color: #0F172A; border: 1px solid #1E293B; border-radius: 10px; padding: 12px; display: flex; flex-direction: column;">
+                <div style="background-color: #131B2E; border: 1px solid #1E293B; border-radius: 8px; padding: 10px; margin-bottom: 12px; text-align: center;">
+                    <div style="font-weight: 700; color: #F8FAFC; font-size: 13.5px;">{stage}</div>
+                    <div style="font-size: 11.5px; color: #38BDF8; font-weight: 600; margin-top: 2px;">{len(cards)} Deals · {format_currency(stage_total_val)}</div>
                 </div>
-            """, unsafe_allow_html=True)
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+        ''']
 
-            if cards:
-                for card in cards:
-                    h_color = "#10B981" if card["deal_health"] == "Healthy" else ("#F59E0B" if card["deal_health"] == "At Risk" else "#EF4444")
-                    f_up_str = card["next_follow_up"].strftime("%b %d") if card["next_follow_up"] else "None"
+        if cards:
+            for card in cards:
+                h_color = "#10B981" if card["deal_health"] == "Healthy" else ("#F59E0B" if card["deal_health"] == "At Risk" else "#EF4444")
+                f_up_str = card["next_follow_up"].strftime("%b %d") if card["next_follow_up"] else "None"
+                contact_str = f"{card['contact_name']} ({card['title']})" if card['title'] else card['contact_name']
 
-                    st.markdown(f"""
-                        <div style="background-color: #131B2E; border: 1px solid #1E293B; border-left: 4px solid {h_color}; border-radius: 8px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
-                            <div style="font-weight: 600; color: #F8FAFC; font-size: 13px;">{card['company_name']}</div>
-                            <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">{card['contact_name']} ({card['title'] or 'N/A'})</div>
-                            <div style="margin: 6px 0;">
-                                <span class="badge badge-priority-c">{card['priority']}</span>
-                                <span style="font-size: 10px; color: {h_color}; margin-left: 4px; font-weight: 600;">● {card['deal_health']}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #CBD5E1; margin-top: 6px;">
-                                <span>ICP: <strong style="color: #38BDF8;">{card['icp_score']:.0f}</strong></span>
-                                <span>Val: <strong>{format_currency(card['deal_value'])}</strong></span>
-                            </div>
-                            <div style="font-size: 10px; color: #64748B; margin-top: 4px;">📅 Next: {f_up_str}</div>
+                # Priority Badge Class
+                p_lower = str(card['priority']).lower()
+                if "a" in p_lower:
+                    p_cls = "badge-priority-a"
+                elif "b" in p_lower:
+                    p_cls = "badge-priority-b"
+                else:
+                    p_cls = "badge-priority-c"
+
+                card_html = f'''
+                    <div style="background-color: #131B2E; border: 1px solid #1E293B; border-left: 4px solid {h_color}; border-radius: 8px; padding: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+                        <div style="font-weight: 600; color: #F8FAFC; font-size: 13px; line-height: 1.3; margin-bottom: 4px;">{card['company_name']}</div>
+                        <div style="font-size: 11px; color: #94A3B8; margin-bottom: 8px;">{contact_str}</div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <span class="badge {p_cls}">{card['priority']}</span>
+                            <span style="font-size: 10.5px; color: {h_color}; font-weight: 600;">● {card['deal_health']}</span>
                         </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                    <div style="text-align: center; padding: 20px 8px; color: #64748B; font-size: 11px; border: 1px dashed #1E293B; border-radius: 8px;">
-                        No deals in stage
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #CBD5E1; border-top: 1px solid #1E293B; padding-top: 6px; margin-top: 4px;">
+                            <span>ICP: <strong style="color: #38BDF8;">{card['icp_score']:.0f}</strong></span>
+                            <span style="font-weight: 700; color: #F8FAFC;">{format_currency(card['deal_value'])}</span>
+                        </div>
+                        <div style="font-size: 10.5px; color: #64748B; margin-top: 4px;">📅 Next: {f_up_str}</div>
                     </div>
-                """, unsafe_allow_html=True)
+                '''
+                col_html.append(card_html)
+        else:
+            col_html.append('''
+                <div style="text-align: center; padding: 24px 10px; color: #64748B; font-size: 11.5px; border: 1px dashed #1E293B; border-radius: 8px;">
+                    No deals in stage
+                </div>
+            ''')
 
+        col_html.append('</div></div>')
+        kanban_html.append("".join(col_html))
+
+    kanban_html.append('</div>')
+
+    st.markdown("".join(kanban_html), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
