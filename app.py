@@ -9,6 +9,7 @@ from ui.lead_detail import render_lead_detail_page
 from ui.pipeline import render_pipeline_page
 from ui.outreach import render_outreach_page
 from ui.analytics import render_analytics_page
+from ui.settings import render_import_export_page
 
 # Set Streamlit Page Configuration
 st.set_page_config(
@@ -101,16 +102,7 @@ elif nav_option == "Revenue Analytics":
     st.session_state["selected_lead_id"] = None
     render_analytics_page()
 
-else:
+elif nav_option == "Settings & Import/Export":
     st.session_state["selected_lead_id"] = None
-    render_header(
-        title=nav_option,
-        subtitle=f"Modular architecture view for {nav_option}.",
-        badge="Sprint 8 Active"
-    )
+    render_import_export_page()
 
-    render_empty_state(
-        title=f"{nav_option} Module",
-        description=f"The {nav_option} module is registered in the system architecture. View pages will be wired in Sprint 9.",
-        icon="🚀"
-    )
