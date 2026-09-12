@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+import textwrap
 import streamlit as st
 import pandas as pd
 
@@ -119,22 +120,23 @@ def render_pipeline_page():
         display_stages = [single_stage]
 
     # BUILD HORIZONTAL SCROLLABLE KANBAN BOARD CONTAINER
-    # Each column has min-width: 270px to prevent narrow squeezing/text wrapping issues
-    kanban_html = ['<div style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 12px; margin-top: 12px; scrollbar-width: thin;">']
+    # Stripping leading indentation ensures Markdown does not treat HTML as preformatted code blocks
+    kanban_html = ['<div style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 16px; margin-top: 12px; scrollbar-width: thin;">']
 
     for stage in display_stages:
         cards = kanban_data.get(stage, [])
         stage_total_val = sum(c["deal_value"] for c in cards)
 
-        # Stage Column Wrapper
-        col_html = [f'''
+        # Stage Column Header HTML (No 4-space indentation)
+        col_header = textwrap.dedent(f'''
             <div style="flex: 0 0 270px; min-width: 270px; background-color: #0F172A; border: 1px solid #1E293B; border-radius: 10px; padding: 12px; display: flex; flex-direction: column;">
-                <div style="background-color: #131B2E; border: 1px solid #1E293B; border-radius: 8px; padding: 10px; margin-bottom: 12px; text-align: center;">
-                    <div style="font-weight: 700; color: #F8FAFC; font-size: 13.5px;">{stage}</div>
-                    <div style="font-size: 11.5px; color: #38BDF8; font-weight: 600; margin-top: 2px;">{len(cards)} Deals · {format_currency(stage_total_val)}</div>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-        ''']
+            <div style="background-color: #131B2E; border: 1px solid #1E293B; border-radius: 8px; padding: 10px; margin-bottom: 12px; text-align: center;">
+            <div style="font-weight: 700; color: #F8FAFC; font-size: 13.5px;">{stage}</div>
+            <div style="font-size: 11.5px; color: #38BDF8; font-weight: 600; margin-top: 2px;">{len(cards)} Deals · {format_currency(stage_total_val)}</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+        ''').strip()
+        kanban_html.append(col_header)
 
         if cards:
             for card in cards:
@@ -151,33 +153,33 @@ def render_pipeline_page():
                 else:
                     p_cls = "badge-priority-c"
 
-                card_html = f'''
+                card_html = textwrap.dedent(f'''
                     <div style="background-color: #131B2E; border: 1px solid #1E293B; border-left: 4px solid {h_color}; border-radius: 8px; padding: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
-                        <div style="font-weight: 600; color: #F8FAFC; font-size: 13px; line-height: 1.3; margin-bottom: 4px;">{card['company_name']}</div>
-                        <div style="font-size: 11px; color: #94A3B8; margin-bottom: 8px;">{contact_str}</div>
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                            <span class="badge {p_cls}">{card['priority']}</span>
-                            <span style="font-size: 10.5px; color: {h_color}; font-weight: 600;">● {card['deal_health']}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #CBD5E1; border-top: 1px solid #1E293B; padding-top: 6px; margin-top: 4px;">
-                            <span>ICP: <strong style="color: #38BDF8;">{card['icp_score']:.0f}</strong></span>
-                            <span style="font-weight: 700; color: #F8FAFC;">{format_currency(card['deal_value'])}</span>
-                        </div>
-                        <div style="font-size: 10.5px; color: #64748B; margin-top: 4px;">📅 Next: {f_up_str}</div>
+                    <div style="font-weight: 600; color: #F8FAFC; font-size: 13px; line-height: 1.3; margin-bottom: 4px;">{card['company_name']}</div>
+                    <div style="font-size: 11px; color: #94A3B8; margin-bottom: 8px;">{contact_str}</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="badge {p_cls}">{card['priority']}</span>
+                    <span style="font-size: 10.5px; color: {h_color}; font-weight: 600;">● {card['deal_health']}</span>
                     </div>
-                '''
-                col_html.append(card_html)
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #CBD5E1; border-top: 1px solid #1E293B; padding-top: 6px; margin-top: 4px;">
+                    <span>ICP: <strong style="color: #38BDF8;">{card['icp_score']:.0f}</strong></span>
+                    <span style="font-weight: 700; color: #F8FAFC;">{format_currency(card['deal_value'])}</span>
+                    </div>
+                    <div style="font-size: 10.5px; color: #64748B; margin-top: 4px;">📅 Next: {f_up_str}</div>
+                    </div>
+                ''').strip()
+                kanban_html.append(card_html)
         else:
-            col_html.append('''
+            empty_html = textwrap.dedent('''
                 <div style="text-align: center; padding: 24px 10px; color: #64748B; font-size: 11.5px; border: 1px dashed #1E293B; border-radius: 8px;">
-                    No deals in stage
+                No deals in stage
                 </div>
-            ''')
+            ''').strip()
+            kanban_html.append(empty_html)
 
-        col_html.append('</div></div>')
-        kanban_html.append("".join(col_html))
+        kanban_html.append('</div></div>')
 
     kanban_html.append('</div>')
 
-    st.markdown("".join(kanban_html), unsafe_allow_html=True)
+    st.markdown("\n".join(kanban_html), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
