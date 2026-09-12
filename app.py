@@ -6,6 +6,7 @@ from ui.components import inject_custom_css, render_header, render_empty_state
 from ui.dashboard import render_dashboard_page
 from ui.leads import render_leads_page
 from ui.lead_detail import render_lead_detail_page
+from ui.pipeline import render_pipeline_page
 
 # Set Streamlit Page Configuration
 st.set_page_config(
@@ -64,7 +65,7 @@ nav_option = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
     <div style="font-size: 11px; color: #64748B; line-height: 1.6;">
-        <div><strong>Status:</strong> <span style="color: #10B981;">● Lead Registry & CRM Active</span></div>
+        <div><strong>Status:</strong> <span style="color: #10B981;">● Kanban Pipeline Active</span></div>
         <div><strong>Database:</strong> SQLite Local</div>
         <div><strong>Target ICP:</strong> Bangalore B2B Tech</div>
         <div><strong>Target Role:</strong> BDA — {config.COMPANY_NAME}</div>
@@ -86,16 +87,20 @@ elif nav_option == "Lead Intelligence":
     else:
         render_leads_page()
 
+elif nav_option == "Pipeline Management":
+    st.session_state["selected_lead_id"] = None
+    render_pipeline_page()
+
 else:
     st.session_state["selected_lead_id"] = None
     render_header(
         title=nav_option,
         subtitle=f"Modular architecture view for {nav_option}.",
-        badge="Sprint 5 Active"
+        badge="Sprint 6 Active"
     )
 
     render_empty_state(
         title=f"{nav_option} Module",
-        description=f"The {nav_option} module is registered in the system architecture. View pages will be wired in Sprints 6-9.",
+        description=f"The {nav_option} module is registered in the system architecture. View pages will be wired in Sprints 7-9.",
         icon="🚀"
     )

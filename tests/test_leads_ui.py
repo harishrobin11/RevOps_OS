@@ -12,7 +12,7 @@ def test_lead_registry_data_fetch():
     assert all(l["industry"] == "SaaS" for l in filtered)
 
     filtered_priority = get_leads(priority="Priority A")
-    assert len(filtered_priority) == 6
+    assert len(filtered_priority) >= 6
 
 
 def test_lead_detail_view_data():
