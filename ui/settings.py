@@ -138,7 +138,8 @@ def render_import_export_page():
 
         with c2:
             st.markdown("<h5 style='color: #CBD5E1; font-weight: 600;'>📍 Target Bangalore Hubs</h5>", unsafe_allow_html=True)
-            for loc in config.TARGET_LOCATIONS:
+            for loc in config.TARGET_TERRITORIES:
+
                 st.markdown(f"- `{loc}`")
 
         with c3:
