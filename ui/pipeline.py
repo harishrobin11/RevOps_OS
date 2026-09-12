@@ -5,7 +5,7 @@ import pandas as pd
 import config
 from services.pipeline_service import get_pipeline_kanban_data, move_pipeline_stage
 from services.lead_service import get_leads
-from ui.components import render_header, render_priority_badge, render_empty_state
+from ui.components import render_header, render_priority_badge, render_metric_card, render_empty_state
 from ui.dashboard import format_currency
 
 
@@ -30,19 +30,19 @@ def render_pipeline_page():
 
     p_col1, p_col2, p_col3, p_col4 = st.columns(4)
     with p_col1:
-        st.metric("Open Opportunities", f"{len(open_leads)} Deals", delta=f"{len(all_leads)} Total Accounts")
+        render_metric_card("Open Opportunities", f"{len(open_leads)} Deals", f"{len(all_leads)} Total Accounts", "#38BDF8")
     with p_col2:
-        st.metric("Active Pipeline Value", format_currency(total_open_value))
+        render_metric_card("Active Pipeline Value", format_currency(total_open_value), "Unweighted Value", "#3B82F6")
     with p_col3:
-        st.metric("Weighted Pipeline Value", format_currency(weighted_value), help="Sum of (Deal Value × Stage Probability)")
+        render_metric_card("Weighted Pipeline Value", format_currency(weighted_value), "Probability Weighted", "#10B981")
     with p_col4:
-        st.metric("Average Deal Size", format_currency(avg_deal_value))
+        render_metric_card("Average Deal Size", format_currency(avg_deal_value), "Per Active Account", "#F59E0B")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # 2. INTERACTIVE STAGE TRANSITION FORM
     with st.expander("🔄 Move Opportunity Stage & Action Update", expanded=False):
-        st.markdown("##### Update Stage & Set Next Action")
+        st.markdown("<h5 style='color: #F8FAFC; margin-bottom: 12px;'>Update Stage & Set Next Action</h5>", unsafe_allow_html=True)
         with st.form("move_stage_form"):
             lead_options = {f"{l['company_name']} — Currently: {l['pipeline_stage']} ({format_currency(l['deal_value'])})": l["id"] for l in all_leads}
 
@@ -63,7 +63,7 @@ def render_pipeline_page():
 
                 next_action = st.text_input("Next Action Item", placeholder="e.g. Conduct discovery call with COO, send proposal deck...")
 
-                submit_move = st.form_submit_button("🚀 Update Pipeline Stage & Log Activity", use_container_width=True)
+                submit_move = st.form_submit_button("🚀 Update Pipeline Stage & Log Activity", type="primary", use_container_width=True)
 
                 if submit_move:
                     try:
@@ -83,7 +83,7 @@ def render_pipeline_page():
     st.markdown("<br>", unsafe_allow_html=True)
 
     # 3. KANBAN BOARD GRID VIEW
-    st.markdown('<div class="section-card"><h3>📋 Pipeline Kanban Board View</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>📋 Pipeline Kanban Board View</span></div>', unsafe_allow_html=True)
 
     kanban_data = get_pipeline_kanban_data()
 
@@ -107,7 +107,7 @@ def render_pipeline_page():
             st.markdown(f"""
                 <div style="background-color: #0F172A; border: 1px solid #1E293B; border-radius: 8px; padding: 10px; margin-bottom: 12px; text-align: center;">
                     <div style="font-weight: 700; color: #F8FAFC; font-size: 13px;">{stage}</div>
-                    <div style="font-size: 11px; color: #3B82F6; font-weight: 600;">{len(cards)} Deals</div>
+                    <div style="font-size: 11px; color: #38BDF8; font-weight: 600;">{len(cards)} Deals</div>
                     <div style="font-size: 11px; color: #94A3B8;">{format_currency(stage_total_val)}</div>
                 </div>
             """, unsafe_allow_html=True)
@@ -118,24 +118,24 @@ def render_pipeline_page():
                     f_up_str = card["next_follow_up"].strftime("%b %d") if card["next_follow_up"] else "None"
 
                     st.markdown(f"""
-                        <div style="background-color: #111827; border: 1px solid #1F2937; border-left: 4px solid {h_color}; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-                            <div style="font-weight: 600; color: #F9FAFB; font-size: 13px;">{card['company_name']}</div>
-                            <div style="font-size: 11px; color: #9CA3AF;">{card['contact_name']} ({card['title'] or 'N/A'})</div>
+                        <div style="background-color: #131B2E; border: 1px solid #1E293B; border-left: 4px solid {h_color}; border-radius: 8px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                            <div style="font-weight: 600; color: #F8FAFC; font-size: 13px;">{card['company_name']}</div>
+                            <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">{card['contact_name']} ({card['title'] or 'N/A'})</div>
                             <div style="margin: 6px 0;">
                                 <span class="badge badge-priority-c">{card['priority']}</span>
                                 <span style="font-size: 10px; color: {h_color}; margin-left: 4px; font-weight: 600;">● {card['deal_health']}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #E5E7EB; margin-top: 6px;">
-                                <span>ICP: <strong>{card['icp_score']:.0f}</strong></span>
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #CBD5E1; margin-top: 6px;">
+                                <span>ICP: <strong style="color: #38BDF8;">{card['icp_score']:.0f}</strong></span>
                                 <span>Val: <strong>{format_currency(card['deal_value'])}</strong></span>
                             </div>
-                            <div style="font-size: 10px; color: #6B7280; margin-top: 4px;">📅 Next: {f_up_str}</div>
+                            <div style="font-size: 10px; color: #64748B; margin-top: 4px;">📅 Next: {f_up_str}</div>
                         </div>
                     """, unsafe_allow_html=True)
             else:
                 st.markdown("""
-                    <div style="text-align: center; padding: 20px 8px; color: #4B5563; font-size: 11px; border: 1px dashed #1F2937; border-radius: 8px;">
-                        No deals in this stage
+                    <div style="text-align: center; padding: 20px 8px; color: #64748B; font-size: 11px; border: 1px dashed #1E293B; border-radius: 8px;">
+                        No deals in stage
                     </div>
                 """, unsafe_allow_html=True)
 

@@ -10,7 +10,7 @@ from services.analytics_service import (
     get_conversion_by_lead_source,
     get_at_risk_opportunities_audit
 )
-from ui.components import render_header, render_metric_card, render_empty_state
+from ui.components import render_header, render_metric_card, render_empty_state, get_plotly_dark_layout
 from ui.dashboard import format_currency
 
 
@@ -29,14 +29,15 @@ def render_analytics_page():
     industry_perf = get_conversion_by_industry()
     source_perf = get_conversion_by_lead_source()
     at_risk_audit = get_at_risk_opportunities_audit()
+    plotly_layout = get_plotly_dark_layout()
 
     # 1. TOP METRICS ROW
     a_col1, a_col2, a_col3, a_col4 = st.columns(4)
     with a_col1:
-        render_metric_card("Total Prospects", f"{kpis['total_accounts']}", "Registry Total Accounts", "#3B82F6")
+        render_metric_card("Total Prospects", f"{kpis['total_accounts']}", "Registry Total Accounts", "#38BDF8")
     with a_col2:
         qual_rate = (kpis['qualified_leads'] / kpis['total_accounts'] * 100.0) if kpis['total_accounts'] > 0 else 0
-        render_metric_card("Qualification Rate", f"{qual_rate:.1f}%", f"{kpis['qualified_leads']} Qualified Leads", "#06B6D4")
+        render_metric_card("Qualification Rate", f"{qual_rate:.1f}%", f"{kpis['qualified_leads']} Qualified Leads", "#3B82F6")
     with a_col3:
         disc_rate = (kpis['discovery_meetings'] / kpis['qualified_leads'] * 100.0) if kpis['qualified_leads'] > 0 else 0
         render_metric_card("Discovery Conversion", f"{disc_rate:.1f}%", f"{kpis['discovery_meetings']} Meetings Booked", "#10B981")
@@ -46,7 +47,7 @@ def render_analytics_page():
     st.markdown("<br>", unsafe_allow_html=True)
 
     # 2. FUNNEL CONVERSION & DROP-OFF ANALYSIS
-    st.markdown('<div class="section-card"><h3>📉 Funnel Conversion & Drop-off Analysis</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>📉 Funnel Conversion & Stage Leakage Analysis</span></div>', unsafe_allow_html=True)
     if funnel_rates:
         df_funnel = pd.DataFrame(funnel_rates)
         df_funnel.columns = ["Stage Transition", "Accounts Count", "Conversion Rate (%)"]
@@ -59,31 +60,29 @@ def render_analytics_page():
                 y="Conversion Rate (%)",
                 text="Conversion Rate (%)",
                 color="Conversion Rate (%)",
-                color_continuous_scale=px.colors.sequential.Viridis
+                color_continuous_scale=["#38BDF8", "#3B82F6", "#10B981"]
             )
             fig_conv.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
             fig_conv.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#9CA3AF"),
-                xaxis=dict(title="", tickangle=-25),
-                yaxis=dict(title="Conversion Rate (%)", range=[0, 115]),
-                margin=dict(l=10, r=10, t=10, b=10)
+                **plotly_layout,
+                xaxis=dict(title="", tickangle=-25, color="#94A3B8"),
+                yaxis=dict(title="Conversion Rate (%)", range=[0, 115], color="#94A3B8"),
+                height=320
             )
             st.plotly_chart(fig_conv, use_container_width=True)
 
         with f_col2:
-            st.markdown("##### Stage Conversion Breakdown")
+            st.markdown("<h5 style='color: #F8FAFC; margin-bottom: 8px;'>Stage Transition Matrix</h5>", unsafe_allow_html=True)
             st.dataframe(df_funnel, use_container_width=True, hide_index=True)
-            st.info("💡 **Leakage Insight**: Drop-off rates indicate where prospects stall between discovery calls and commercial proposal submissions.")
+            st.info("💡 **Funnel Leakage Insight**: Drop-off rates highlight friction points between Discovery calls and Commercial Proposal submissions.")
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 3. INDUSTRY & LEAD SOURCE CONVERSION BREAKDOWN
-    st.markdown('<div class="section-card"><h3>🏢 Market Performance & Channel Attribution</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>🏢 Market Performance & Channel Attribution</span></div>', unsafe_allow_html=True)
     perf_col1, perf_col2 = st.columns(2)
 
     with perf_col1:
-        st.subheader("Win Rate & Volume by Industry")
+        st.markdown("<h5 style='color: #CBD5E1; font-weight: 600; margin-bottom: 12px;'>Win Rate & Volume by Industry</h5>", unsafe_allow_html=True)
         if industry_perf:
             df_ind = pd.DataFrame(industry_perf)
             df_ind = df_ind.rename(columns={
@@ -99,21 +98,19 @@ def render_analytics_page():
                 y="Win Rate (%)",
                 color="Win Rate (%)",
                 text="Win Rate (%)",
-                color_continuous_scale=px.colors.sequential.Teal
+                color_continuous_scale=["#38BDF8", "#10B981"]
             )
             fig_ind_win.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
             fig_ind_win.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#9CA3AF"),
-                xaxis=dict(title="", tickangle=-30),
-                yaxis=dict(title="Win Rate (%)", range=[0, 115]),
-                margin=dict(l=10, r=10, t=10, b=10)
+                **plotly_layout,
+                xaxis=dict(title="", tickangle=-30, color="#94A3B8"),
+                yaxis=dict(title="Win Rate (%)", range=[0, 115], color="#94A3B8"),
+                height=300
             )
             st.plotly_chart(fig_ind_win, use_container_width=True)
 
     with perf_col2:
-        st.subheader("Pipeline Value by Lead Source Channel")
+        st.markdown("<h5 style='color: #CBD5E1; font-weight: 600; margin-bottom: 12px;'>Pipeline Value by Lead Source Channel</h5>", unsafe_allow_html=True)
         if source_perf:
             df_src = pd.DataFrame(source_perf)
             df_src = df_src.rename(columns={
@@ -127,20 +124,18 @@ def render_analytics_page():
                 df_src,
                 names="Lead Source",
                 values="Total Value (₹)",
-                hole=0.4,
-                color_discrete_sequence=px.colors.qualitative.Pastel
+                hole=0.45,
+                color_discrete_sequence=["#38BDF8", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6"]
             )
             fig_src_val.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#9CA3AF"),
-                margin=dict(l=10, r=10, t=10, b=10)
+                **plotly_layout,
+                height=300
             )
             st.plotly_chart(fig_src_val, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 4. AT-RISK & STALLED OPPORTUNITY AUDIT TABLE
-    st.markdown('<div class="section-card"><h3>⚠️ At-Risk & Stalled Pipeline Intervention Audit</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>⚠️ At-Risk & Stalled Pipeline Intervention Audit</span></div>', unsafe_allow_html=True)
     if at_risk_audit:
         df_risk = pd.DataFrame(at_risk_audit)
         if "id" in df_risk.columns:

@@ -18,8 +18,8 @@ def render_leads_page():
     )
 
     # 1. ADD NEW LEAD EXPANDER FORM
-    with st.expander("➕ Add New Target Account", expanded=False):
-        st.markdown("##### Account & Decision Maker Details")
+    with st.expander("➕ Provision New Target Account", expanded=False):
+        st.markdown("<h5 style='color: #F8FAFC; margin-bottom: 12px; font-weight: 600;'>Account & Decision Maker Profile</h5>", unsafe_allow_html=True)
         with st.form("add_lead_form", clear_on_submit=True):
             col1, col2, col3 = st.columns(3)
 
@@ -48,7 +48,7 @@ def render_leads_page():
 
             notes = st.text_area("Operational Context & Pain Points", placeholder="Describe primary operational bottlenecks, manual processes, or growth signals...")
 
-            submitted = st.form_submit_button("🚀 Save Lead & Calculate ICP Score", use_container_width=True)
+            submitted = st.form_submit_button("🚀 Save Lead & Calculate ICP Score", type="primary", use_container_width=True)
 
             if submitted:
                 if not company_name.strip() or not contact_name.strip():
@@ -78,7 +78,7 @@ def render_leads_page():
     st.markdown("<br>", unsafe_allow_html=True)
 
     # 2. SEARCH & FILTER TOOLBAR
-    st.markdown('<div class="section-card"><h3>🔍 Prospecting Filters & Search</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>🔍 Prospecting Filters & Search</span></div>', unsafe_allow_html=True)
     filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
 
     with filter_col1:
@@ -121,7 +121,7 @@ def render_leads_page():
     )
 
     # 4. REGISTRY TABLE & SELECTION
-    st.markdown(f'<div class="section-card"><h3>📋 Accounts Registry ({len(leads)} Matches)</h3>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-card"><div class="section-card-title"><span>📋 Accounts Registry ({len(leads)} Matches)</span></div>', unsafe_allow_html=True)
 
     if leads:
         table_data = []
@@ -156,7 +156,7 @@ def render_leads_page():
             selected_label = st.selectbox("Select Account for Executive CRM View:", list(lead_map.keys()))
         with sel_col2:
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("👁️ Open Account CRM View", use_container_width=True):
+            if st.button("👁️ Open Account CRM View", type="primary", use_container_width=True):
                 st.session_state["selected_lead_id"] = lead_map[selected_label]
                 st.rerun()
 

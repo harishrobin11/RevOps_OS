@@ -19,7 +19,7 @@ def render_outreach_page():
     Render Multichannel Outreach Engine & Script Generator View.
     """
     render_header(
-        title="Outreach Engine & Script Generator",
+        title="Outreach Engine & Script Workspace",
         subtitle=f"Multichannel prospecting scripts, outbound cadences, and objection handling for {config.COMPANY_NAME}.",
         badge="Outreach Active"
     )
@@ -31,7 +31,7 @@ def render_outreach_page():
         return
 
     # 1. ACCOUNT & OUTREACH CONTROL TOOLBAR
-    st.markdown('<div class="section-card"><h3>⚙️ Outreach Generator Controls</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>⚙️ Outreach Generator Controls</span></div>', unsafe_allow_html=True)
 
     lead_map = {f"{l['company_name']} — {l['contact_name']} ({l['priority']})": l["id"] for l in all_leads}
 
@@ -54,16 +54,16 @@ def render_outreach_page():
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 2. GENERATED SCRIPT DISPLAY & ACTIONS
-    st.markdown('<div class="section-card"><h3>📜 Generated Script / Message</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>📜 Generated Script / Message Editor</span></div>', unsafe_allow_html=True)
 
     if channel == "Cold Call":
         script_obj = generate_cold_call_script(selected_lead)
-        st.markdown("##### 📞 Cold Call Script & Discovery Prompt")
+        st.markdown("<h5 style='color: #F8FAFC; margin-bottom: 8px;'>📞 Cold Call Script & Discovery Prompt</h5>", unsafe_allow_html=True)
         st.code(script_obj["full_script"], language="markdown")
 
         with st.form("log_call_outreach_form"):
             outcome_input = st.text_input("Call Outcome Notes", placeholder="e.g. Spoke with COO, requested follow-up email")
-            submit_log = st.form_submit_button("🚀 Log Cold Call Activity", use_container_width=True)
+            submit_log = st.form_submit_button("🚀 Log Cold Call Activity", type="primary", use_container_width=True)
             if submit_log:
                 log_outreach(
                     lead_id=selected_lead_id,
@@ -78,13 +78,13 @@ def render_outreach_page():
 
     elif channel == "Email":
         email_obj = generate_email(selected_lead, tone=tone, cadence_step=cadence_step)
-        st.markdown("##### ✉️ Email Template Preview")
+        st.markdown("<h5 style='color: #F8FAFC; margin-bottom: 8px;'>✉️ Email Template Preview & Editor</h5>", unsafe_allow_html=True)
 
         with st.form("send_email_outreach_form"):
             subj_val = st.text_input("Email Subject Line", value=email_obj["subject"])
             body_val = st.text_area("Email Body", value=email_obj["body"], height=250)
 
-            submit_log = st.form_submit_button("🚀 Log Email Outreach & Record Activity", use_container_width=True)
+            submit_log = st.form_submit_button("🚀 Log Email Outreach & Record Activity", type="primary", use_container_width=True)
             if submit_log:
                 log_outreach(
                     lead_id=selected_lead_id,
@@ -99,13 +99,13 @@ def render_outreach_page():
 
     else:  # LinkedIn
         li_msg = generate_linkedin_message(selected_lead)
-        st.markdown("##### 🔗 LinkedIn Connection Note")
+        st.markdown("<h5 style='color: #F8FAFC; margin-bottom: 8px;'>🔗 LinkedIn Connection Note</h5>", unsafe_allow_html=True)
         char_count = len(li_msg)
         st.caption(f"Character Count: **{char_count} / 300** characters (LinkedIn Limit: 300)")
 
         with st.form("log_li_outreach_form"):
             li_val = st.text_area("Connection Note", value=li_msg, height=120)
-            submit_log = st.form_submit_button("🚀 Log LinkedIn Connection Note", use_container_width=True)
+            submit_log = st.form_submit_button("🚀 Log LinkedIn Connection Note", type="primary", use_container_width=True)
             if submit_log:
                 log_outreach(
                     lead_id=selected_lead_id,
@@ -121,15 +121,15 @@ def render_outreach_page():
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 3. 9-DAY OUTBOUND CADENCE TIMELINE
-    st.markdown('<div class="section-card"><h3>📅 9-Day Outbound Cadence Schedule</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>📅 9-Day Outbound Cadence Schedule</span></div>', unsafe_allow_html=True)
     cadence_steps = get_cadence_steps()
 
     c_cols = st.columns(4)
     for idx, s in enumerate(cadence_steps):
         with c_cols[idx]:
             st.markdown(f"""
-                <div style="background-color: #0F172A; border: 1px solid #1E293B; border-radius: 8px; padding: 14px;">
-                    <div style="font-weight: 700; color: #3B82F6; font-size: 13px; margin-bottom: 4px;">{s['step_name']}</div>
+                <div style="background-color: #0F172A; border: 1px solid #1E293B; border-radius: 8px; padding: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                    <div style="font-weight: 700; color: #38BDF8; font-size: 13px; margin-bottom: 4px;">{s['step_name']}</div>
                     <div style="font-size: 11px; color: #94A3B8; margin-bottom: 8px;">{s['objective']}</div>
                     <div style="font-size: 10px; color: #10B981; font-weight: 600;">CTA: {s['cta']}</div>
                 </div>
@@ -138,7 +138,7 @@ def render_outreach_page():
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 4. OBJECTION HANDLING LIBRARY
-    st.markdown('<div class="section-card"><h3>🛡️ Objection Handling Battlecards</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>🛡️ Objection Handling Battlecards</span></div>', unsafe_allow_html=True)
     obj_lib = get_objection_library()
 
     selected_obj_key = st.selectbox("Select Prospect Objection:", list(obj_lib.keys()), index=0)
@@ -146,18 +146,18 @@ def render_outreach_page():
 
     obj_col1, obj_col2 = st.columns(2)
     with obj_col1:
-        st.markdown(f"**Recommended Response:**")
+        st.markdown("##### Recommended Response Strategy")
         st.info(bcard["response"].format(Name=selected_lead["contact_name"].split()[0], company=selected_lead["company_name"], industry=selected_lead["industry"]))
 
     with obj_col2:
-        st.markdown(f"**Follow-up Question:**")
+        st.markdown("##### Follow-up Discovery Question")
         st.warning(bcard["follow_up_question"].format(company=selected_lead["company_name"], industry=selected_lead["industry"]))
         st.markdown(f"**Recommended Next Action:** `{bcard['next_action']}`")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 5. OUTREACH HISTORY TIMELINE FOR SELECTED ACCOUNT
-    st.markdown(f'<div class="section-card"><h3>📜 Outreach Log History for {selected_lead["company_name"]}</h3>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-card"><div class="section-card-title"><span>📜 Outreach History for {selected_lead["company_name"]}</span></div>', unsafe_allow_html=True)
     history = get_outreach_history_for_lead(selected_lead_id)
 
     if history:

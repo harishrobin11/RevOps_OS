@@ -15,7 +15,8 @@ from ui.components import (
     render_header,
     render_metric_card,
     render_priority_badge,
-    render_empty_state
+    render_empty_state,
+    get_plotly_dark_layout
 )
 
 
@@ -28,6 +29,7 @@ def format_currency(value: float) -> str:
         return f"₹{val/10000000:.2f} Cr"
     elif val >= 100000:
         return f"₹{val/100000:.1f} Lakhs"
+
     else:
         return f"₹{val:,.0f}"
 
@@ -38,7 +40,7 @@ def render_dashboard_page():
     """
     render_header(
         title="Executive Revenue Dashboard",
-        subtitle=f"Real-time lead intelligence, pipeline health, and high-priority accounts for {config.COMPANY_NAME}.",
+        subtitle=f"Real-time pipeline health, lead intelligence, and action queues for {config.COMPANY_NAME}.",
         badge="Live Analytics"
     )
 
@@ -49,38 +51,46 @@ def render_dashboard_page():
     funnel_data = get_funnel_distribution()
     industry_data = get_industry_distribution()
     priority_accounts = get_priority_accounts_summary(limit=10)
+    all_leads = get_leads()
 
     # 2. KPI METRICS GRID (ROW 1 & ROW 2)
     kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
     with kpi_col1:
-        render_metric_card("Total Accounts", f"{kpis['total_accounts']}", "Target B2B Accounts", "#3B82F6")
+        render_metric_card("Total Accounts", f"{kpis['total_accounts']}", "Target B2B Accounts", "#38BDF8")
     with kpi_col2:
         contact_pct = (kpis['contacted_accounts'] / kpis['total_accounts'] * 100) if kpis['total_accounts'] > 0 else 0
-        render_metric_card("Contacted Accounts", f"{kpis['contacted_accounts']}", f"{contact_pct:.1f}% Outreach Rate", "#06B6D4")
+        render_metric_card("Contacted Accounts", f"{kpis['contacted_accounts']}", f"{contact_pct:.1f}% Outreach Rate", "#3B82F6")
     with kpi_col3:
-        render_metric_card("Qualified Opportunities", f"{kpis['qualified_leads']}", f"{kpis['discovery_meetings']} Discovery Meetings", "#10B981")
+        render_metric_card("Qualified Leads", f"{kpis['qualified_leads']}", f"{kpis['discovery_meetings']} Discovery Meetings", "#10B981")
     with kpi_col4:
         val_str = format_currency(kpis['pipeline_value'])
         render_metric_card("Active Pipeline Value", val_str, f"{kpis['open_opportunities']} Open Deals", "#F59E0B")
 
     kpi_col5, kpi_col6, kpi_col7, kpi_col8 = st.columns(4)
     with kpi_col5:
-        render_metric_card("Conversion Rate", f"{kpis['win_rate']:.1f}%", f"{kpis['won_count']} Closed Won Deals", "#10B981")
+        render_metric_card("Win Rate", f"{kpis['win_rate']:.1f}%", f"{kpis['won_count']} Closed Won Deals", "#10B981")
     with kpi_col6:
-        render_metric_card("Overdue Follow-ups", f"{kpis['overdue_followups']}", "Requires Immediate Action", "#EF4444" if kpis['overdue_followups'] > 0 else "#10B981")
+        render_metric_card(
+            "Overdue Follow-ups",
+            f"{kpis['overdue_followups']}",
+            "Action Required" if kpis['overdue_followups'] > 0 else "Queue Clear",
+            "#EF4444" if kpis['overdue_followups'] > 0 else "#10B981"
+        )
     with kpi_col7:
-        render_metric_card("Due Today", f"{kpis['due_today_followups']}", "Today's Action Items", "#F59E0B")
+        render_metric_card("Due Today", f"{kpis['due_today_followups']}", "Today's Outreach Tasks", "#F59E0B")
     with kpi_col8:
         render_metric_card("Priority A Leads", f"{kpis['priority_a_count']} Accounts", "Hot Prospects", "#8B5CF6")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # 3. EXECUTIVE CHARTS SECTION
-    st.markdown('<div class="section-card"><h3>📈 Revenue Funnel & Market Intelligence</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>📈 Revenue Funnel & Market Intelligence</span></div>', unsafe_allow_html=True)
     chart_col1, chart_col2 = st.columns(2)
 
+    plotly_layout = get_plotly_dark_layout()
+
     with chart_col1:
-        st.subheader("Pipeline Stage Funnel")
+        st.markdown("<h5 style='color: #CBD5E1; font-weight: 600; margin-bottom: 12px;'>Pipeline Stage Funnel</h5>", unsafe_allow_html=True)
         if funnel_data:
             df_stage = pd.DataFrame(funnel_data)
             df_stage.columns = ["Stage", "Count"]
@@ -93,21 +103,19 @@ def render_dashboard_page():
                 y="Count",
                 color="Stage",
                 text="Count",
-                color_discrete_sequence=px.colors.qualitative.Bold
+                color_discrete_sequence=["#38BDF8", "#3B82F6", "#60A5FA", "#818CF8", "#A78BFA", "#C084FC", "#F472B6", "#10B981", "#EF4444", "#64748B"]
             )
             fig_funnel.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#9CA3AF"),
-                xaxis=dict(title="", tickangle=-30),
-                yaxis=dict(title="Accounts"),
-                margin=dict(l=10, r=10, t=10, b=10),
-                showlegend=False
+                **plotly_layout,
+                xaxis=dict(title="", tickangle=-30, color="#94A3B8"),
+                yaxis=dict(title="Accounts", color="#94A3B8"),
+                showlegend=False,
+                height=320
             )
             st.plotly_chart(fig_funnel, use_container_width=True)
 
     with chart_col2:
-        st.subheader("Industry Mix Distribution")
+        st.markdown("<h5 style='color: #CBD5E1; font-weight: 600; margin-bottom: 12px;'>Industry Distribution Mix</h5>", unsafe_allow_html=True)
         if industry_data:
             df_ind = pd.DataFrame(industry_data)
             df_ind.columns = ["Industry", "Count"]
@@ -115,26 +123,22 @@ def render_dashboard_page():
                 df_ind,
                 names="Industry",
                 values="Count",
-                hole=0.45,
-                color_discrete_sequence=px.colors.sequential.Tealgrn
+                hole=0.5,
+                color_discrete_sequence=["#38BDF8", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"]
             )
             fig_pie.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#9CA3AF"),
-                margin=dict(l=10, r=10, t=10, b=10)
+                **plotly_layout,
+                height=320
             )
             st.plotly_chart(fig_pie, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # SECONDARY CHARTS ROW (BANT Priority & Lead Source)
-    st.markdown('<div class="section-card"><h3>🎯 Lead Qualification & Source Breakdown</h3>', unsafe_allow_html=True)
+    # SECONDARY CHARTS ROW (Priority & Lead Source)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>🎯 BANT Priority & Channel Breakdown</span></div>', unsafe_allow_html=True)
     sec_col1, sec_col2 = st.columns(2)
 
-    all_leads = get_leads()
-
     with sec_col1:
-        st.subheader("Priority Distribution (BANT)")
+        st.markdown("<h5 style='color: #CBD5E1; font-weight: 600; margin-bottom: 12px;'>Lead Priority Breakdown</h5>", unsafe_allow_html=True)
         if all_leads:
             p_counts = {}
             for l in all_leads:
@@ -150,22 +154,20 @@ def render_dashboard_page():
                 color_discrete_map={
                     "Priority A": "#EF4444",
                     "Priority B": "#F59E0B",
-                    "Priority C": "#3B82F6"
+                    "Priority C": "#38BDF8"
                 }
             )
             fig_p.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#9CA3AF"),
-                xaxis=dict(title=""),
-                yaxis=dict(title="Leads"),
-                margin=dict(l=10, r=10, t=10, b=10),
-                showlegend=False
+                **plotly_layout,
+                xaxis=dict(title="", color="#94A3B8"),
+                yaxis=dict(title="Leads", color="#94A3B8"),
+                showlegend=False,
+                height=280
             )
             st.plotly_chart(fig_p, use_container_width=True)
 
     with sec_col2:
-        st.subheader("Lead Source Channel Breakdown")
+        st.markdown("<h5 style='color: #CBD5E1; font-weight: 600; margin-bottom: 12px;'>Lead Source Channel Attribution</h5>", unsafe_allow_html=True)
         if all_leads:
             s_counts = {}
             for l in all_leads:
@@ -179,33 +181,31 @@ def render_dashboard_page():
                 orientation="h",
                 color="Source",
                 text="Count",
-                color_discrete_sequence=px.colors.qualitative.Prism
+                color_discrete_sequence=["#38BDF8", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6"]
             )
             fig_s.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#9CA3AF"),
-                xaxis=dict(title="Accounts"),
-                yaxis=dict(title=""),
-                margin=dict(l=10, r=10, t=10, b=10),
-                showlegend=False
+                **plotly_layout,
+                xaxis=dict(title="Accounts", color="#94A3B8"),
+                yaxis=dict(title="", color="#94A3B8"),
+                showlegend=False,
+                height=280
             )
             st.plotly_chart(fig_s, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 4. PRIORITY TARGET ACCOUNTS TABLE
-    st.markdown('<div class="section-card"><h3>🔥 Top Priority Target Accounts & Actions</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>🔥 Top Priority Target Accounts</span></div>', unsafe_allow_html=True)
     if priority_accounts:
         df_p = pd.DataFrame(priority_accounts)
         if "id" in df_p.columns:
             df_p = df_p.drop(columns=["id"])
         st.dataframe(df_p, use_container_width=True, hide_index=True)
     else:
-        render_empty_state("No Priority Accounts", "No high priority accounts currently flagged.")
+        render_empty_state("No Priority Accounts", "No high priority accounts currently flagged.", "🎯")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 5. FOLLOW-UP QUEUE TABS
-    st.markdown('<div class="section-card"><h3>⏱️ Action Queue & Cadence Deadline Tracking</h3>', unsafe_allow_html=True)
+    # 5. ACTION QUEUE & CADENCE DEADLINES
+    st.markdown('<div class="section-card"><div class="section-card-title"><span>⏱️ Action Queue & Cadence Deadlines</span></div>', unsafe_allow_html=True)
     tab_overdue, tab_today, tab_upcoming = st.tabs(["⚠️ Overdue Follow-ups", "📅 Due Today", "⏩ Upcoming"])
 
     with tab_overdue:
@@ -216,7 +216,7 @@ def render_dashboard_page():
         if overdue_leads:
             o_data = [{
                 "Company": l["company_name"],
-                "Contact": f"{l['contact_name']} ({l['title']})",
+                "Contact Person": f"{l['contact_name']} ({l['title']})",
                 "Industry": l["industry"],
                 "Priority": l["priority"],
                 "Stage": l["pipeline_stage"],
@@ -225,7 +225,7 @@ def render_dashboard_page():
             } for l in overdue_leads]
             st.dataframe(pd.DataFrame(o_data), use_container_width=True, hide_index=True)
         else:
-            st.success("🎉 No overdue follow-ups! Pipeline action queue is up to date.")
+            st.success("🎉 No overdue follow-ups! Pipeline action queue is clear.")
 
     with tab_today:
         today_leads = [
@@ -235,7 +235,7 @@ def render_dashboard_page():
         if today_leads:
             t_data = [{
                 "Company": l["company_name"],
-                "Contact": f"{l['contact_name']} ({l['title']})",
+                "Contact Person": f"{l['contact_name']} ({l['title']})",
                 "Industry": l["industry"],
                 "Priority": l["priority"],
                 "Stage": l["pipeline_stage"],
@@ -254,7 +254,7 @@ def render_dashboard_page():
         if upcoming_leads:
             u_data = [{
                 "Company": l["company_name"],
-                "Contact": f"{l['contact_name']} ({l['title']})",
+                "Contact Person": f"{l['contact_name']} ({l['title']})",
                 "Industry": l["industry"],
                 "Priority": l["priority"],
                 "Stage": l["pipeline_stage"],

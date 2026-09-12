@@ -8,28 +8,24 @@ from services.import_export_service import (
 )
 from services import lead_service
 import config
+from ui.components import render_header
 
 
 def render_import_export_page():
-    st.markdown("""
-        <div style="margin-bottom: 25px;">
-            <h1 style="color: #F8FAFC; margin-bottom: 5px; font-size: 1.8rem; font-weight: 700;">
-                ⚙️ Data Management & Settings
-            </h1>
-            <p style="color: #94A3B8; font-size: 0.95rem; margin-top: 0;">
-                Bulk import B2B leads via CSV with validation, export CRM data, and manage pipeline configuration.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
+    render_header(
+        title="Data Management & System Settings",
+        subtitle=f"Bulk import B2B leads via CSV with validation, export CRM data, and review ICP parameters for {config.COMPANY_NAME}.",
+        badge="Settings Active"
+    )
 
-    tabs = st.tabs(["📥 CSV Lead Import", "📤 Data Export", "🎯 Target ICP Configuration"])
+    tabs = st.tabs(["📥 CSV Lead Import", "📤 Data Export Engine", "🎯 Target ICP Configuration"])
 
     # TAB 1: CSV LEAD IMPORT
     with tabs[0]:
+        st.markdown('<div class="section-card"><div class="section-card-title"><span>📥 Bulk Account CSV Import</span></div>', unsafe_allow_html=True)
         col1, col2 = st.columns([2, 1])
 
         with col1:
-            st.markdown("### 📥 Bulk Lead Import")
             st.markdown("""
                 Upload your target company list in CSV format. The import engine will automatically:
                 - Validate required company names & email formatting
@@ -57,10 +53,10 @@ def render_import_export_page():
                         st.warning(f"⚠️ Skipped **{report['error_count']}** rows due to validation issues or duplicate records.")
                         with st.expander("🔍 View Detailed Import Error Log", expanded=True):
                             err_df = pd.DataFrame(report["errors"])
-                            st.dataframe(err_df, hide_index=True)
+                            st.dataframe(err_df, use_container_width=True, hide_index=True)
 
         with col2:
-            st.markdown("### 📄 Sample CSV Template")
+            st.markdown("<h5 style='color: #F8FAFC; margin-bottom: 8px;'>📄 CSV Format Template</h5>", unsafe_allow_html=True)
             st.markdown("Download the official CSV format template to structure your bulk leads correctly.")
 
             sample_csv_data = generate_sample_csv()
@@ -69,6 +65,7 @@ def render_import_export_page():
                 data=sample_csv_data,
                 file_name="revops_os_lead_import_template.csv",
                 mime="text/csv",
+                type="secondary",
                 use_container_width=True
             )
 
@@ -76,7 +73,7 @@ def render_import_export_page():
             st.markdown("""
                 **Mandatory Columns:**
                 - `Company`: Company Name (Required)
-                - `Email`: Contact Email (Must be valid format)
+                - `Email`: Contact Email (Valid format)
 
                 **Recommended Columns:**
                 - `Contact`, `Title`, `Phone`, `Industry`
@@ -84,20 +81,18 @@ def render_import_export_page():
                 - `Employees` (50 - 300)
                 - `Deal Value`, `Notes`
             """)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # TAB 2: DATA EXPORT
     with tabs[1]:
-        st.markdown("### 📤 Export CRM & Pipeline Data")
+        st.markdown('<div class="section-card"><div class="section-card-title"><span>📤 Export CRM & Pipeline Data</span></div>', unsafe_allow_html=True)
         st.markdown("Download raw pipeline, lead intelligence, or activity timeline logs for external analysis.")
 
         ex_col1, ex_col2 = st.columns(2)
 
         with ex_col1:
-            st.markdown("""
-                <div style="background-color: #1E293B; padding: 20px; border-radius: 8px; border: 1px solid #334155;">
-                    <h4 style="color: #38BDF8; margin-top: 0;">📋 Export Lead Registry & Opportunities</h4>
-                    <p style="color: #94A3B8; font-size: 0.85rem;">Export active leads, ICP scores, BANT status, and pipeline stages.</p>
-            """, unsafe_allow_html=True)
+            st.markdown("<h5 style='color: #38BDF8; font-weight: 600; margin-bottom: 4px;'>📋 Export Lead Registry & Opportunities</h5>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #94A3B8; font-size: 0.85rem;'>Export active leads, ICP scores, BANT status, and pipeline stages.</p>", unsafe_allow_html=True)
 
             exp_stage = st.selectbox("Filter Stage for Export", ["All"] + config.PIPELINE_STAGES, key="exp_stage")
             exp_industry = st.selectbox("Filter Industry for Export", ["All"] + config.TARGET_INDUSTRIES, key="exp_ind")
@@ -109,16 +104,13 @@ def render_import_export_page():
                 data=leads_csv_data,
                 file_name=f"revops_leads_export_{exp_stage.lower()}_{exp_industry.lower()}.csv",
                 mime="text/csv",
+                type="primary",
                 use_container_width=True
             )
-            st.markdown("</div>", unsafe_allow_html=True)
 
         with ex_col2:
-            st.markdown("""
-                <div style="background-color: #1E293B; padding: 20px; border-radius: 8px; border: 1px solid #334155;">
-                    <h4 style="color: #38BDF8; margin-top: 0;">📜 Export Full Activity Timeline</h4>
-                    <p style="color: #94A3B8; font-size: 0.85rem;">Export complete touchpoint log (calls, emails, meeting notes, stage updates).</p>
-            """, unsafe_allow_html=True)
+            st.markdown("<h5 style='color: #38BDF8; font-weight: 600; margin-bottom: 4px;'>📜 Export Full Activity Timeline</h5>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #94A3B8; font-size: 0.85rem;'>Export complete touchpoint log (calls, emails, meeting notes, stage updates).</p>", unsafe_allow_html=True)
 
             act_csv_data = export_activities_to_csv()
 
@@ -127,28 +119,30 @@ def render_import_export_page():
                 data=act_csv_data,
                 file_name="revops_activity_log_export.csv",
                 mime="text/csv",
+                type="primary",
                 use_container_width=True
             )
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # TAB 3: TARGET ICP CONFIGURATION
     with tabs[2]:
-        st.markdown("### 🎯 Target ICP Rule Parameters")
+        st.markdown('<div class="section-card"><div class="section-card-title"><span>🎯 Target ICP Rule Parameters</span></div>', unsafe_allow_html=True)
         st.markdown("RevOps OS intelligence rules for Bangalore B2B Tech market segment.")
 
         c1, c2, c3 = st.columns(3)
 
         with c1:
-            st.markdown("#### 🏢 Target Industries")
+            st.markdown("<h5 style='color: #CBD5E1; font-weight: 600;'>🏢 Target Industries</h5>", unsafe_allow_html=True)
             for ind in config.TARGET_INDUSTRIES:
                 st.markdown(f"- `{ind}`")
 
         with c2:
-            st.markdown("#### 📍 Target Bangalore Hubs")
+            st.markdown("<h5 style='color: #CBD5E1; font-weight: 600;'>📍 Target Bangalore Hubs</h5>", unsafe_allow_html=True)
             for loc in config.TARGET_LOCATIONS:
                 st.markdown(f"- `{loc}`")
 
         with c3:
-            st.markdown("#### 👥 Company Size Criteria")
+            st.markdown("<h5 style='color: #CBD5E1; font-weight: 600;'>👥 Company Size Criteria</h5>", unsafe_allow_html=True)
             st.info(f"**Optimal Employee Range:** {config.COMPANY_SIZE_MIN} – {config.COMPANY_SIZE_MAX} employees")
             st.markdown("Target Decision Makers: COO, VP Operations, Head of Delivery, Founder.")
+        st.markdown('</div>', unsafe_allow_html=True)

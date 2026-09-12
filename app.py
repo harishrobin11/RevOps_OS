@@ -14,12 +14,12 @@ from ui.settings import render_import_export_page
 # Set Streamlit Page Configuration
 st.set_page_config(
     page_title=f"{config.PRODUCT_NAME} — Revenue Operations Platform",
-    page_icon="📊",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Inject Custom Executive Dark Theme CSS
+# Inject Centralized Executive Dark SaaS Theme CSS
 inject_custom_css()
 
 
@@ -34,20 +34,20 @@ def initialize_app():
 # Initialize Database & Seed System
 initialize_app()
 
-# Session State for Account Detail View Navigation
+# Session State for Lead Detail View Navigation
 if "selected_lead_id" not in st.session_state:
     st.session_state["selected_lead_id"] = None
 
 # ==========================================
-# SIDEBAR NAVIGATION
+# 🏛️ EXECUTIVE SIDEBAR NAVIGATION
 # ==========================================
 st.sidebar.markdown(f"""
-    <div style="padding: 10px 0 20px 0; border-bottom: 1px solid #1E293B; margin-bottom: 20px;">
-        <div style="font-size: 20px; font-weight: 700; color: #F8FAFC; letter-spacing: -0.02em;">
-            ⚡ {config.PRODUCT_NAME}
+    <div style="padding: 16px 8px 18px 8px; border-bottom: 1px solid #1E293B; margin-bottom: 16px;">
+        <div style="font-size: 19px; font-weight: 800; color: #F8FAFC; letter-spacing: -0.03em; display: flex; align-items: center; gap: 8px;">
+            <span style="color: #38BDF8;">⚡</span> {config.PRODUCT_NAME}
         </div>
-        <div style="font-size: 11px; color: #64748B; font-weight: 500;">
-            B2B Revenue Operations System
+        <div style="font-size: 11px; color: #64748B; font-weight: 500; margin-top: 3px; letter-spacing: 0.02em;">
+            B2B Revenue Intelligence System
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -55,54 +55,67 @@ st.sidebar.markdown(f"""
 nav_option = st.sidebar.radio(
     "NAVIGATION",
     [
-        "Executive Dashboard",
-        "Lead Intelligence",
-        "Pipeline Management",
-        "Outreach Engine",
-        "Revenue Analytics",
-        "Settings & Import/Export"
+        "📊 Executive Dashboard",
+        "🎯 Lead Intelligence",
+        "📌 Pipeline Management",
+        "✉️ Outreach Engine",
+        "📈 Revenue Analytics",
+        "⚙️ Settings & Data"
     ],
     index=0
 )
 
-st.sidebar.markdown("---")
+st.sidebar.markdown("""
+    <div style="margin-top: 40px; padding-top: 16px; border-top: 1px solid #1E293B;"></div>
+""", unsafe_allow_html=True)
+
 st.sidebar.markdown(f"""
-    <div style="font-size: 11px; color: #64748B; line-height: 1.6;">
-        <div><strong>Status:</strong> <span style="color: #10B981;">● Revenue Analytics Active</span></div>
-        <div><strong>Database:</strong> SQLite Local</div>
-        <div><strong>Target ICP:</strong> Bangalore B2B Tech</div>
-        <div><strong>Target Role:</strong> BDA — {config.COMPANY_NAME}</div>
-        <div><strong>Version:</strong> {config.VERSION}</div>
+    <div style="font-size: 11px; color: #64748B; line-height: 1.7; padding: 0 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <span>System Status:</span>
+            <span style="color: #10B981; font-weight: 600;">● Operational</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <span>Database:</span>
+            <span style="color: #CBD5E1;">SQLite Local</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <span>Target ICP:</span>
+            <span style="color: #38BDF8;">Bangalore Tech</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span>Version:</span>
+            <span style="color: #64748B;">v{config.VERSION}</span>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
 
 # ==========================================
-# PAGE ROUTING
+# 🔀 PAGE ROUTING CONTROLLER
 # ==========================================
-if nav_option == "Executive Dashboard":
+if "Dashboard" in nav_option:
     st.session_state["selected_lead_id"] = None
     render_dashboard_page()
 
-elif nav_option == "Lead Intelligence":
+elif "Lead Intelligence" in nav_option:
     if st.session_state.get("selected_lead_id"):
         render_lead_detail_page(st.session_state["selected_lead_id"])
     else:
         render_leads_page()
 
-elif nav_option == "Pipeline Management":
+elif "Pipeline Management" in nav_option:
     st.session_state["selected_lead_id"] = None
     render_pipeline_page()
 
-elif nav_option == "Outreach Engine":
+elif "Outreach Engine" in nav_option:
     st.session_state["selected_lead_id"] = None
     render_outreach_page()
 
-elif nav_option == "Revenue Analytics":
+elif "Revenue Analytics" in nav_option:
     st.session_state["selected_lead_id"] = None
     render_analytics_page()
 
-elif nav_option == "Settings & Import/Export":
+elif "Settings" in nav_option:
     st.session_state["selected_lead_id"] = None
     render_import_export_page()
-
