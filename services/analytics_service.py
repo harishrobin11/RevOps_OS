@@ -102,7 +102,6 @@ def get_priority_accounts_summary(limit: int = 10) -> list[dict]:
             f_up_str = acc.next_follow_up.strftime("%Y-%m-%d") if acc.next_follow_up else "None set"
             is_overdue = bool(acc.next_follow_up and acc.next_follow_up < now)
             status_tag = "⚠️ OVERDUE" if is_overdue else "OK"
-
             result.append({
                 "id": acc.id,
                 "Company": acc.company_name,
@@ -116,3 +115,111 @@ def get_priority_accounts_summary(limit: int = 10) -> list[dict]:
                 "Status": status_tag
             })
         return result
+
+
+def get_funnel_conversion_rates() -> list[dict]:
+    """
+    Compute stage-to-stage conversion percentages and drop-off analysis.
+    """
+    with get_db() as session:
+        total = session.query(Lead).count()
+        if total == 0:
+            return []
+
+        contacted = session.query(Lead).filter(Lead.pipeline_stage != "Identified").count()
+        engaged = session.query(Lead).filter(Lead.pipeline_stage.in_(["Engaged", "Qualified", "Discovery Booked", "Proposal", "Negotiation", "Won"])).count()
+        qualified = session.query(Lead).filter(Lead.pipeline_stage.in_(["Qualified", "Discovery Booked", "Proposal", "Negotiation", "Won"])).count()
+        discovery = session.query(Lead).filter(Lead.pipeline_stage.in_(["Discovery Booked", "Proposal", "Negotiation", "Won"])).count()
+        proposal = session.query(Lead).filter(Lead.pipeline_stage.in_(["Proposal", "Negotiation", "Won"])).count()
+        won = session.query(Lead).filter(Lead.pipeline_stage == "Won").count()
+
+        return [
+            {"stage": "Identified -> Contacted", "count": contacted, "conversion_rate": (contacted / total * 100.0)},
+            {"stage": "Contacted -> Engaged", "count": engaged, "conversion_rate": (engaged / contacted * 100.0) if contacted > 0 else 0.0},
+            {"stage": "Engaged -> Qualified", "count": qualified, "conversion_rate": (qualified / engaged * 100.0) if engaged > 0 else 0.0},
+            {"stage": "Qualified -> Discovery", "count": discovery, "conversion_rate": (discovery / qualified * 100.0) if qualified > 0 else 0.0},
+            {"stage": "Discovery -> Proposal", "count": proposal, "conversion_rate": (proposal / discovery * 100.0) if discovery > 0 else 0.0},
+            {"stage": "Proposal -> Closed Won", "count": won, "conversion_rate": (won / proposal * 100.0) if proposal > 0 else 0.0}
+        ]
+
+
+def get_conversion_by_industry() -> list[dict]:
+    """
+    Compute win rate, account volume, and pipeline value grouped by industry.
+    """
+    with get_db() as session:
+        results = []
+        for ind in config.TARGET_INDUSTRIES:
+            total_ind = session.query(Lead).filter(Lead.industry == ind).count()
+            if total_ind > 0:
+                won_ind = session.query(Lead).filter(Lead.industry == ind, Lead.pipeline_stage == "Won").count()
+                val_res = session.query(func.sum(Lead.deal_value)).filter(Lead.industry == ind).scalar()
+                total_val = float(val_res) if val_res else 0.0
+                win_rate = (won_ind / total_ind * 100.0)
+
+                results.append({
+                    "industry": ind,
+                    "total_accounts": total_ind,
+                    "won_accounts": won_ind,
+                    "win_rate": win_rate,
+                    "total_value": total_val
+                })
+        return results
+
+
+def get_conversion_by_lead_source() -> list[dict]:
+    """
+    Compute win rate and pipeline value grouped by acquisition lead source.
+    """
+    with get_db() as session:
+        results = []
+        for src in config.LEAD_SOURCES:
+            total_src = session.query(Lead).filter(Lead.lead_source == src).count()
+            if total_src > 0:
+                won_src = session.query(Lead).filter(Lead.lead_source == src, Lead.pipeline_stage == "Won").count()
+                val_res = session.query(func.sum(Lead.deal_value)).filter(Lead.lead_source == src).scalar()
+                total_val = float(val_res) if val_res else 0.0
+                win_rate = (won_src / total_src * 100.0)
+
+                results.append({
+                    "lead_source": src,
+                    "total_accounts": total_src,
+                    "won_accounts": won_src,
+                    "win_rate": win_rate,
+                    "total_value": total_val
+                })
+        return results
+
+
+def get_at_risk_opportunities_audit() -> list[dict]:
+    """
+    Retrieve stalled or at-risk opportunities requiring executive intervention.
+    """
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    with get_db() as session:
+        at_risk_leads = session.query(Lead).filter(
+            Lead.deal_health.in_(["At Risk", "Stalled"]),
+            ~Lead.pipeline_stage.in_(["Won", "Lost"])
+        ).order_by(Lead.deal_value.desc()).all()
+
+        results = []
+        for l in at_risk_leads:
+            is_overdue = l.next_follow_up and l.next_follow_up < now
+            risk_reason = "Overdue follow-up" if is_overdue else "Inactivity in pipeline stage"
+            intervention = "Re-engage decision maker via Day 3 Value email" if is_overdue else "Review deal parameters with COO"
+
+            results.append({
+                "id": l.id,
+                "Company": l.company_name,
+                "Contact": f"{l.contact_name} ({l.title})",
+                "Industry": l.industry,
+                "Stage": l.pipeline_stage,
+                "Priority": l.priority,
+                "Health Status": l.deal_health,
+                "Deal Value": f"₹{l.deal_value/100000:.1f}L",
+                "Next Follow-up": l.next_follow_up.strftime("%Y-%m-%d") if l.next_follow_up else "None",
+                "Risk Factor": risk_reason,
+                "Recommended Action": intervention
+            })
+        return results
